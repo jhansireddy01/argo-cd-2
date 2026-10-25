@@ -926,3 +926,89 @@ func TestAppSet_Generate_Cluster(t *testing.T) {
 		assert.EqualError(t, err, "namespace 'NOT-ALLOWED' is not permitted")
 	})
 }
+
+func TestAppSet_Generate_RBAC(t *testing.T) {
+	appSet1 := newTestAppSet(func(appset *appsv1.ApplicationSet) {
+		appset.Name = "AppSet1"
+		appset.Spec.Template.Name = "{{name}}"
+		appset.Spec.Generators = []appsv1.ApplicationSetGenerator{
+			{
+				Clusters: &appsv1.ClusterGenerator{},
+			},
+		}
+	})
+
+	testCases := []struct {
+		name          string
+		policy        string
+		defaultRole   string
+		expectedError string
+	}{
+		{
+			name:        "generate permission allows generation",
+			policy:      "p, role:test, applicationsets, generate, default/*, allow",
+			defaultRole: "role:test",
+		},
+		{
+			name:        "create permission allows generation for backward compatibility",
+			policy:      "p, role:test, applicationsets, create, default/*, allow",
+			defaultRole: "role:test",
+		},
+		{
+			name:          "get permission does not allow generation",
+			policy:        "p, role:test, applicationsets, get, default/*, allow",
+			defaultRole:   "role:test",
+			expectedError: "permission denied: applicationsets, generate, default/AppSet1",
+		},
+		{
+			name:          "builtin readonly role does not allow generation",
+			policy:        assets.BuiltinPolicyCSV,
+			defaultRole:   "role:readonly",
+			expectedError: "permission denied: applicationsets, generate, default/AppSet1",
+		},
+		{
+			name:          "generate permission in another project does not allow generation",
+			policy:        "p, role:test, applicationsets, generate, my-proj/*, allow",
+			defaultRole:   "role:test",
+			expectedError: "permission denied: applicationsets, generate, default/AppSet1",
+		},
+		{
+			name:          "no permission does not allow generation",
+			expectedError: "permission denied: applicationsets, generate, default/AppSet1",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := func(enf *rbac.Enforcer) {
+				_ = enf.SetBuiltinPolicy(tc.policy)
+				enf.SetDefaultRole(tc.defaultRole)
+			}
+			appSetServer, _ := newTestAppSetServerWithEnforcerConfigure(t, f, "", appSet1)
+
+			res, err := appSetServer.Generate(t.Context(), &applicationset.ApplicationSetGenerateRequest{ApplicationSet: appSet1})
+			if tc.expectedError != "" {
+				require.ErrorContains(t, err, tc.expectedError)
+				assert.Nil(t, res)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, res.Applications, 2)
+			assert.Equal(t, "fake-cluster", res.Applications[0].Name)
+			assert.Equal(t, "in-cluster", res.Applications[1].Name)
+		})
+	}
+
+	t.Run("generate permission does not allow creation", func(t *testing.T) {
+		f := func(enf *rbac.Enforcer) {
+			_ = enf.SetBuiltinPolicy("p, role:test, applicationsets, generate, default/*, allow")
+			enf.SetDefaultRole("role:test")
+		}
+		appSetServer, _ := newTestAppSetServerWithEnforcerConfigure(t, f, "")
+
+		for _, dryRun := range []bool{false, true} {
+			_, err := appSetServer.Create(t.Context(), &applicationset.ApplicationSetCreateRequest{Applicationset: appSet1.DeepCopy(), DryRun: dryRun})
+			require.ErrorContains(t, err, "permission denied: applicationsets, create, default/AppSet1")
+		}
+	})
+}

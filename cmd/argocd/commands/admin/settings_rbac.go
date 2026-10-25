@@ -56,7 +56,7 @@ var resourceMap = map[string]string{
 var validRBACResourcesActions = map[string]actionTraitMap{
 	rbac.ResourceAccounts:        accountsActions,
 	rbac.ResourceApplications:    applicationsActions,
-	rbac.ResourceApplicationSets: defaultCRUDActions,
+	rbac.ResourceApplicationSets: applicationSetsActions,
 	rbac.ResourceCertificates:    defaultCRDActions,
 	rbac.ResourceClusters:        defaultCRUDActions,
 	rbac.ResourceExtensions:      extensionActions,
@@ -79,6 +79,14 @@ var defaultCRDActions = actionTraitMap{
 	rbac.ActionCreate: rbacTrait{},
 	rbac.ActionGet:    rbacTrait{},
 	rbac.ActionDelete: rbacTrait{},
+}
+
+var applicationSetsActions = actionTraitMap{
+	rbac.ActionCreate:   rbacTrait{},
+	rbac.ActionGet:      rbacTrait{},
+	rbac.ActionUpdate:   rbacTrait{},
+	rbac.ActionDelete:   rbacTrait{},
+	rbac.ActionGenerate: rbacTrait{},
 }
 
 var applicationsActions = actionTraitMap{

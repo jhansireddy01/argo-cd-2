@@ -71,19 +71,19 @@ Syntax: `p, <role/user/group>, <resource>, <action>, <object>, <effect>`
 
 Below is a table that summarizes all possible resources and which actions are valid for each of them.
 
-| Resource\Action     | get | create | update | delete | sync | rollback | action | override | invoke |
-| :------------------ | :-: | :----: | :----: | :----: | :--: | :------: | :----: | :------: | :----: |
-| **applications**    | ✅  |   ✅   |   ✅   |   ✅   |  ✅  |    ✅    |   ✅   |    ✅    |   ❌   |
-| **applicationsets** | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **clusters**        | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **projects**        | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **repositories**    | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **accounts**        | ✅  |   ❌   |   ✅   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **certificates**    | ✅  |   ✅   |   ❌   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **gpgkeys**         | ✅  |   ✅   |   ❌   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **logs**            | ✅  |   ❌   |   ❌   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **exec**            | ❌  |   ✅   |   ❌   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |
-| **extensions**      | ❌  |   ❌   |   ❌   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ✅   |
+| Resource\Action     | get | create | update | delete | sync | rollback | action | override | invoke | generate |
+| :------------------ | :-: | :----: | :----: | :----: | :--: | :------: | :----: | :------: | :----: | :------: |
+| **applications**    | ✅  |   ✅   |   ✅   |   ✅   |  ✅  |    ✅    |   ✅   |    ✅    |   ❌   |    ❌    |
+| **applicationsets** | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ✅    |
+| **clusters**        | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **projects**        | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **repositories**    | ✅  |   ✅   |   ✅   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **accounts**        | ✅  |   ❌   |   ✅   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **certificates**    | ✅  |   ✅   |   ❌   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **gpgkeys**         | ✅  |   ✅   |   ❌   |   ✅   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **logs**            | ✅  |   ❌   |   ❌   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **exec**            | ❌  |   ✅   |   ❌   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ❌   |    ❌    |
+| **extensions**      | ❌  |   ❌   |   ❌   |   ❌   |  ❌  |    ❌    |   ❌   |    ❌    |   ✅   |    ❌    |
 
 ### Application-Specific Policy
 
@@ -286,6 +286,29 @@ outside the `dev-project` project.
 ```csv
 p, dev-group, applicationsets, *, dev-project/*, allow
 ```
+
+#### The `generate` action
+
+The `generate` action allows a user to render the Applications an ApplicationSet would produce, without creating,
+updating, or deleting anything. It is required by `argocd appset generate` and by the
+[Preview tab of the Web UI](applicationset/Web-UI.md#preview), which both call the `Generate` API.
+
+For backward compatibility, a user who has the `create` action on an ApplicationSet can also generate it.
+The `generate` action is not granted by the built-in `role:readonly` role.
+
+The following policy allows a CI pipeline to render the ApplicationSets that target the `dev-project` project and to
+read the existing Applications of that project for comparison, without granting it any write access:
+
+```csv
+p, role:appset-validator, applicationsets, generate, dev-project/*, allow
+p, role:appset-validator, applications, get, dev-project/*, allow
+```
+
+> [!WARNING]
+> Generating Applications runs the ApplicationSet generators inside the API server, using the ApplicationSet spec
+> supplied by the user and the credentials available to Argo CD (for example, repository credentials and secrets
+> referenced by SCM Provider or Pull Request generators). Only grant `generate` to users you would trust to define
+> generators. See [ApplicationSet Security](applicationset/Security.md) for details.
 
 ### The `logs` resource
 

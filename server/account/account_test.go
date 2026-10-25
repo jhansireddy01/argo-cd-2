@@ -401,6 +401,57 @@ func TestCanI_RollbackFlagEnabled_EnforcesRBAC(t *testing.T) {
 	})
 }
 
+func TestCanI_GenerateApplicationSets(t *testing.T) {
+	t.Parallel()
+	allowOnly := func(allowedAction string) rbac.ClaimsEnforcerFunc {
+		return func(_ jwt.Claims, rvals ...any) bool {
+			return len(rvals) >= 3 && rvals[2] == allowedAction
+		}
+	}
+
+	tests := []struct {
+		name         string
+		resource     string
+		enforcer     rbac.ClaimsEnforcerFunc
+		expectedResp string
+	}{
+		{
+			name:         "allowed when generate permission granted",
+			resource:     "applicationsets",
+			enforcer:     allowOnly("generate"),
+			expectedResp: "yes",
+		},
+		{
+			name:         "allowed when create permission granted",
+			resource:     "applicationsets",
+			enforcer:     allowOnly("create"),
+			expectedResp: "yes",
+		},
+		{
+			name:         "denied when only get permission granted",
+			resource:     "applicationsets",
+			enforcer:     allowOnly("get"),
+			expectedResp: "no",
+		},
+		{
+			name:         "create does not imply generate for other resources",
+			resource:     "applications",
+			enforcer:     allowOnly("create"),
+			expectedResp: "no",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			accountServer, _ := newTestAccountServerExt(t, t.Context(), tt.enforcer)
+			resp, err := accountServer.CanI(adminContext(t.Context()), &account.CanIRequest{Resource: tt.resource, Action: "generate", Subresource: "*/*"})
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedResp, resp.Value)
+		})
+	}
+}
+
 func TestCanI_RBACPolicyMatchingWithNormalizedSubresource(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

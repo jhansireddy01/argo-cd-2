@@ -102,6 +102,22 @@ func Test_validateRBACResourceAction(t *testing.T) {
 			},
 			valid: false,
 		},
+		{
+			name: "Test valid generate action for applicationsets",
+			args: args{
+				resource: rbac.ResourceApplicationSets,
+				action:   rbac.ActionGenerate,
+			},
+			valid: true,
+		},
+		{
+			name: "Test invalid generate action for applications",
+			args: args{
+				resource: rbac.ResourceApplications,
+				action:   rbac.ActionGenerate,
+			},
+			valid: false,
+		},
 	}
 
 	for _, tt := range tests {

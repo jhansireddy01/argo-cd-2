@@ -80,6 +80,7 @@ const (
 	ActionAction   = "action"
 	ActionInvoke   = "invoke"
 	ActionRollback = "rollback"
+	ActionGenerate = "generate"
 )
 
 var (
@@ -108,6 +109,7 @@ var (
 		ActionOverride,
 		ActionAction,
 		ActionInvoke,
+		ActionGenerate,
 	}
 )
 

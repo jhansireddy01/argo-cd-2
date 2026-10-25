@@ -158,6 +158,10 @@ func (s *Server) CanI(ctx context.Context, r *account.CanIRequest) (*account.Can
 	}
 
 	ok := s.enf.Enforce(ctx.Value("claims"), r.Resource, r.Action, subresource)
+	// The ApplicationSet Generate API also accepts `create` in place of `generate`, so mirror that here.
+	if !ok && r.Resource == rbac.ResourceApplicationSets && r.Action == rbac.ActionGenerate {
+		ok = s.enf.Enforce(ctx.Value("claims"), r.Resource, rbac.ActionCreate, subresource)
+	}
 	if ok {
 		return &account.CanIResponse{Value: "yes"}, nil
 	}

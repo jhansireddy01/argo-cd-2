@@ -19,7 +19,7 @@ The Web UI consumes the following endpoints. RBAC is enforced on every call; the
 | `GET /api/v1/applicationsets/{name}/resource-tree`     | The resource-tree visualization                     | `applicationsets, get`                |
 | `GET /api/v1/applicationsets/{name}/events`            | The Events tab in the slide-out panel               | `applicationsets, get`                |
 | `GET /api/v1/stream/applicationsets`                   | Live updates on the list page and details page      | `applicationsets, get` (per event)    |
-| `POST /api/v1/applicationsets/generate`                | The Preview tab                                     | `applicationsets, create`             |
+| `POST /api/v1/applicationsets/generate`                | The Preview tab                                     | `applicationsets, generate` or `applicationsets, create` |
 
 ## RBAC
 
@@ -33,10 +33,10 @@ If a user has `get` permission on an ApplicationSet, they can see it in every re
 
 ### Preview
 
-The Preview tab is the one operation that requires more than `get`. It calls `Generate`, which renders candidate Applications from a (possibly user-edited) ApplicationSet spec server-side. Because rendering a preview is the same operation the controller would perform when creating Applications, the API server enforces **`applicationsets, create`** on the project of the template — the same permission required to actually create the rendered Applications. 
+The Preview tab is the one operation that requires more than `get`. It calls `Generate`, which renders candidate Applications from a (possibly user-edited) ApplicationSet spec server-side. Because rendering a preview runs the same generators the controller would run when creating Applications, the API server enforces **`applicationsets, generate`** on the project of the template. For backward compatibility, **`applicationsets, create`** on that project is also accepted. Neither action is granted by the built-in `role:readonly` role.
 
-A user who can view an ApplicationSet but does not have `create` on its project's template will see a permission-denied response from the Preview tab.
-See [Security](Security.md) for the full ApplicationSet RBAC model.
+A user who can view an ApplicationSet but has neither `generate` nor `create` on its project's template will see a permission-denied response from the Preview tab.
+See [The `generate` action](../rbac.md#the-generate-action) for an example policy and [Security](Security.md) for the full ApplicationSet RBAC model.
 
 Because that permission check needs a concrete project, ApplicationSets with a [templated `project` field](Security.md#templated-project-field) cannot be previewed at all. The API rejects them with:
 

@@ -2746,6 +2746,7 @@ var validActions = map[string]bool{
 	rbac.ActionSync:     true,
 	rbac.ActionOverride: true,
 	rbac.ActionRollback: true,
+	rbac.ActionGenerate: true,
 	"*":                 true,
 }
 

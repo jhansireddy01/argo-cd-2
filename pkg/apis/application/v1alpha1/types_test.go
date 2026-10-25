@@ -1518,6 +1518,7 @@ func TestAppProject_ValidPolicyRules(t *testing.T) {
 		"p, proj:my-proj:my-role, applications, delete/*/Pod/*, my-proj/foo, allow",
 		"p, proj:my-proj:my-role, applications, action/*, my-proj/foo, allow",
 		"p, proj:my-proj:my-role, applications, action/apps/Deployment/restart, my-proj/foo, allow",
+		"p, proj:my-proj:my-role, applicationsets, generate, my-proj/*, allow",
 	}
 	for _, good := range goodPolicies {
 		p.Spec.Roles[0].Policies = []string{good}
@@ -4928,6 +4929,7 @@ func TestIsValidAction(t *testing.T) {
 		{"ValidDelete", "delete", true},
 		{"ValidSync", "sync", true},
 		{"ValidOverride", "override", true},
+		{"ValidGenerate", "generate", true},
 		{"ValidWildcard", "*", true},
 
 		// pattern matches

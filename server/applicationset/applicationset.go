@@ -475,8 +475,8 @@ func (s *Server) Generate(ctx context.Context, q *applicationset.ApplicationSetG
 	if err != nil {
 		return nil, fmt.Errorf("error validating ApplicationSets: %w", err)
 	}
-	if err := s.checkCreatePermissions(ctx, appset, projectName); err != nil {
-		return nil, fmt.Errorf("error checking create permissions for ApplicationSets %s : %w", appset.Name, err)
+	if err := s.checkGeneratePermissions(ctx, appset, projectName); err != nil {
+		return nil, fmt.Errorf("error checking generate permissions for ApplicationSets %s : %w", appset.Name, err)
 	}
 
 	logs := bytes.NewBuffer(nil)
@@ -565,6 +565,25 @@ func (s *Server) checkCreatePermissions(ctx context.Context, appset *v1alpha1.Ap
 		return err
 	}
 
+	return s.checkProjectExists(ctx, projectName)
+}
+
+// checkGeneratePermissions verifies that the caller may render the Applications of an ApplicationSet without
+// persisting anything. Either the `generate` or the `create` action is accepted: `create` already implies the
+// ability to generate, and it was the only action that allowed generation before `generate` was introduced.
+func (s *Server) checkGeneratePermissions(ctx context.Context, appset *v1alpha1.ApplicationSet, projectName string) error {
+	claims := ctx.Value("claims")
+	rbacName := appset.RBACName(s.ns)
+	if !s.enf.Enforce(claims, rbac.ResourceApplicationSets, rbac.ActionCreate, rbacName) {
+		if err := s.enf.EnforceErr(claims, rbac.ResourceApplicationSets, rbac.ActionGenerate, rbacName); err != nil {
+			return err
+		}
+	}
+
+	return s.checkProjectExists(ctx, projectName)
+}
+
+func (s *Server) checkProjectExists(ctx context.Context, projectName string) error {
 	_, err := s.appclientset.ArgoprojV1alpha1().AppProjects(s.ns).Get(ctx, projectName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
